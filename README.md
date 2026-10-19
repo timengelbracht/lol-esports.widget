@@ -3,6 +3,10 @@
 A dark desktop widget for macOS ([Übersicht](https://tracesof.net/uebersicht/)) showing upcoming
 League of Legends esports matches, plus recent results behind a spoiler guard.
 
+![Upcoming and Results tabs](docs/preview.png)
+
+> **macOS only.** Übersicht is a Mac app.
+
 - Upcoming and live matches, grouped by day, in your local time
 - Pick any of the ~50 leagues and tournaments on lolesports.com (LEC, LCK, LPL, Worlds, MSI, ERLs, …)
 - **Spoiler-safe results:** a separate *Results* tab in the header; each score stays hidden (`? : ?`) until you click it
