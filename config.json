@@ -1,0 +1,15 @@
+{
+  "leagues": ["lec", "lcs", "lck", "lpl", "first_stand", "msi", "worlds"],
+
+  "upcoming": { "max": 12 },
+
+  "results": {
+    "show": true,
+    "max": 6,
+    "hideSpoilers": true
+  },
+
+  "refreshMinutes": 5,
+  "hour12": false,
+  "position": { "bottom": "100px", "left": "20px" }
+}
