@@ -5,7 +5,7 @@ League of Legends esports matches, plus recent results behind a spoiler guard.
 
 - Upcoming and live matches, grouped by day, in your local time
 - Pick any of the ~50 leagues and tournaments on lolesports.com (LEC, LCK, LPL, Worlds, MSI, ERLs, …)
-- **Spoiler-safe results:** the results list starts collapsed, and each score stays hidden (`? : ?`) until you click it
+- **Spoiler-safe results:** a separate *Results* tab in the header; each score stays hidden (`? : ?`) until you click it
 - Drag the widget by its header; it remembers where you put it
 - No setup or API key needed
 
@@ -56,9 +56,9 @@ league ID. To change a league's badge label or color, edit its entry in `lib/lea
 |---|---|---|
 | `leagues` | LEC, LCS, LCK, LPL, FST, MSI, Worlds | Slugs (or numeric IDs) to track |
 | `upcoming.max` | `12` | Max upcoming matches shown |
-| `results.show` | `true` | Show the recent results section |
+| `results.show` | `true` | Show the *Results* tab |
 | `results.max` | `6` | Number of recent results |
-| `results.hideSpoilers` | `true` | Start collapsed with scores hidden until clicked; `false` shows everything |
+| `results.hideSpoilers` | `true` | Hide scores until clicked; `false` shows them right away |
 | `refreshMinutes` | `5` | How often to refresh |
 | `hour12` | `false` | `true` = 7:00 PM, `false` = 19:00, `null` = system default |
 | `position` | `{"bottom": "100px", "left": "20px"}` | Starting position (any of `top`/`right`/`bottom`/`left`) |

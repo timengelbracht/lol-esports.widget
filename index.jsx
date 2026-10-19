@@ -27,7 +27,7 @@ export const refreshFrequency = (config.refreshMinutes ?? 5) * 60 * 1000;
 export const initialState = {
   output: null,
   error: null,
-  resultsOpen: !results.hideSpoilers,
+  view: "upcoming",
   revealed: {},
 };
 
@@ -35,8 +35,8 @@ export const updateState = (event, prev) => {
   switch (event.type) {
     case "UB/COMMAND_RAN":
       return { ...prev, output: event.output, error: event.error };
-    case "TOGGLE_RESULTS":
-      return { ...prev, resultsOpen: !prev.resultsOpen };
+    case "SET_VIEW":
+      return { ...prev, view: event.view };
     case "REVEAL":
       return { ...prev, revealed: { ...prev.revealed, [event.id]: true } };
     case "REVEAL_ALL":
@@ -112,6 +112,7 @@ function makeDraggable(el) {
 
   let dragging = false, ox = 0, oy = 0;
   handle.addEventListener("mousedown", (e) => {
+    if (e.target.closest(".tab")) return; // let tab clicks through
     dragging = true;
     ox = e.clientX - el.offsetLeft;
     oy = e.clientY - el.offsetTop;
@@ -197,43 +198,64 @@ function ResultRow({ ev, revealed, dispatch }) {
         <span className={`team-code ${winner(t2) ? "winner" : ""}`}>{t2?.code || "TBD"}</span>
       </div>
       <div className="match-right">
-        <span className="match-until">{formatDay(ev.startTime)}</span>
+        <span className="match-time">{formatTime(ev.startTime)}</span>
       </div>
     </div>
   );
 }
 
-function ResultsSection({ events, state, dispatch }) {
+function ResultsView({ events, state, dispatch }) {
+  if (events.length === 0) return <div className="empty-line">No recent results</div>;
   const ids = events.map(matchId);
   const allRevealed = !results.hideSpoilers || ids.every((id) => state.revealed[id]);
 
   return (
-    <div className="results">
-      <div className="section-label clickable" onClick={() => dispatch({ type: "TOGGLE_RESULTS" })}>
-        <span>{state.resultsOpen ? "▾" : "▸"} Results</span>
-        {state.resultsOpen && !allRevealed && (
-          <span
-            className="reveal-all"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch({ type: "REVEAL_ALL", ids });
-            }}
-          >
+    <div>
+      {!allRevealed && (
+        <div className="spoiler-bar">
+          <span>Scores hidden · click one to reveal</span>
+          <span className="reveal-all" onClick={() => dispatch({ type: "REVEAL_ALL", ids })}>
             reveal all
           </span>
-        )}
-        {!state.resultsOpen && <span className="spoiler-note">spoilers hidden</span>}
-      </div>
-      {state.resultsOpen &&
-        events.map((ev) => (
-          <ResultRow
-            key={matchId(ev)}
-            ev={ev}
-            revealed={!results.hideSpoilers || !!state.revealed[matchId(ev)]}
-            dispatch={dispatch}
-          />
-        ))}
+        </div>
+      )}
+      {Object.entries(groupByDay(events)).map(([day, dayEvents]) => (
+        <div key={day} className="day-group">
+          <div className="section-label">{day}</div>
+          {dayEvents.map((ev) => (
+            <ResultRow
+              key={matchId(ev)}
+              ev={ev}
+              revealed={!results.hideSpoilers || !!state.revealed[matchId(ev)]}
+              dispatch={dispatch}
+            />
+          ))}
+        </div>
+      ))}
     </div>
+  );
+}
+
+function UpcomingView({ events }) {
+  if (events.length === 0) return <div className="empty-line">No upcoming matches</div>;
+  return Object.entries(groupByDay(events)).map(([day, dayEvents]) => (
+    <div key={day} className="day-group">
+      <div className="section-label">{day}</div>
+      {dayEvents.map((ev) => (
+        <UpcomingRow key={matchId(ev)} ev={ev} />
+      ))}
+    </div>
+  ));
+}
+
+function Tab({ view, label, state, dispatch }) {
+  return (
+    <span
+      className={`tab ${state.view === view ? "active" : ""}`}
+      onClick={() => dispatch({ type: "SET_VIEW", view })}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -275,20 +297,21 @@ export const render = (state, dispatch) => {
       <div className="header">
         <span className="header-title">LoL Esports</span>
         <span className="header-dot" />
-        <span className="header-sub">Upcoming</span>
+        {results.show ? (
+          <span className="tabs">
+            <Tab view="upcoming" label="Upcoming" state={state} dispatch={dispatch} />
+            <Tab view="results" label="Results" state={state} dispatch={dispatch} />
+          </span>
+        ) : (
+          <span className="header-sub">Upcoming</span>
+        )}
       </div>
 
-      {upcoming.length === 0 && <div className="empty-line">No upcoming matches</div>}
-      {Object.entries(groupByDay(upcoming)).map(([day, dayEvents]) => (
-        <div key={day} className="day-group">
-          <div className="section-label">{day}</div>
-          {dayEvents.map((ev) => (
-            <UpcomingRow key={matchId(ev)} ev={ev} />
-          ))}
-        </div>
-      ))}
-
-      {past.length > 0 && <ResultsSection events={past} state={state} dispatch={dispatch} />}
+      {results.show && state.view === "results" ? (
+        <ResultsView events={past} state={state} dispatch={dispatch} />
+      ) : (
+        <UpcomingView events={upcoming} />
+      )}
 
       <div className="footer">
         {unknownLeagues.length > 0 && (
@@ -319,7 +342,7 @@ export const className = `
     position: fixed;
     ${posCss}
     width: 340px;
-    max-height: 420px;
+    max-height: 290px;
     overflow-y: auto;
     background: rgba(8, 10, 18, 0.88);
     backdrop-filter: blur(20px);
@@ -387,21 +410,40 @@ export const className = `
     padding-left: 2px;
   }
 
-  .clickable { cursor: pointer; }
-  .clickable:hover { color: rgba(226, 217, 200, 0.6); }
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+  }
 
-  .reveal-all, .spoiler-note {
-    font-size: 9px;
+  .tab {
+    font-size: 11px;
     letter-spacing: 1px;
-    color: rgba(200, 155, 60, 0.55);
+    text-transform: uppercase;
+    font-weight: 500;
+    color: rgba(226, 217, 200, 0.3);
+    cursor: pointer;
+  }
+  .tab:hover { color: rgba(226, 217, 200, 0.6); }
+  .tab.active { color: #C89B3C; }
+
+  .spoiler-bar {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    color: rgba(226, 217, 200, 0.35);
+    margin-bottom: 8px;
+    padding: 0 2px;
+  }
+
+  .reveal-all {
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(200, 155, 60, 0.6);
+    cursor: pointer;
   }
   .reveal-all:hover { color: #C89B3C; }
-
-  .results {
-    margin-top: 4px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(200, 155, 60, 0.1);
-  }
 
   .empty-line {
     font-size: 11px;
